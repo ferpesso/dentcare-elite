@@ -18,10 +18,24 @@ import twilio from "twilio";
 import { Queue, Worker } from "bullmq";
 
 // ─── Twilio Client ────────────────────────────────────────────────────────────
-const twilioClient = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
+// Lazy initialization: só cria o cliente se as credenciais forem válidas
+let _twilioClient: ReturnType<typeof twilio> | null = null;
+function getTwilioClient(): ReturnType<typeof twilio> {
+  if (!_twilioClient) {
+    const sid = process.env.TWILIO_ACCOUNT_SID || "";
+    const token = process.env.TWILIO_AUTH_TOKEN || "";
+    if (!sid.startsWith("AC") || !token || token === "placeholder") {
+      throw new Error("Twilio não configurado. Configure TWILIO_ACCOUNT_SID e TWILIO_AUTH_TOKEN.");
+    }
+    _twilioClient = twilio(sid, token);
+  }
+  return _twilioClient;
+}
+const twilioClient = new Proxy({} as ReturnType<typeof twilio>, {
+  get: (_target, prop) => {
+    return (getTwilioClient() as any)[prop];
+  }
+});
 
 // ─── Configuração Redis / BullMQ ──────────────────────────────────────────────
 // FIX V35: Unificado para usar REDIS_URL (consistente com index.ts e auth.ts)
