@@ -33,7 +33,7 @@ function ModalNovoUtente({ onClose, onSuccess }: { onClose: () => void; onSucces
 
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 py-8 bg-black/50 backdrop-blur-md overflow-y-auto">
-      <div className="bg-[var(--bg-elevated)] border border-[var(--border-light)] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden my-auto">
+      <div className="bg-[var(--bg-elevated)] border border-[var(--border-light)] rounded-2xl w-full max-w-md shadow-2xl my-auto flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between p-6 border-b border-[var(--border-light)] bg-[var(--bg-surface)]">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-[#00E5FF]" />
@@ -44,7 +44,7 @@ function ModalNovoUtente({ onClose, onSuccess }: { onClose: () => void; onSucces
           </button>
         </div>
 
-        <form onSubmit={submit} className="p-6 space-y-5">
+        <form onSubmit={submit} className="p-6 space-y-5 overflow-y-auto flex-1">
           {erro && (
             <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
               <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />

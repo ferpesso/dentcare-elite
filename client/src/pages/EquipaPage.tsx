@@ -116,8 +116,8 @@ function ModalDentista({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 py-8 bg-black/50 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded-2xl w-full max-w-lg shadow-2xl my-auto">
-        <div className="flex items-center justify-between p-6 border-b border-[var(--border-lightest)] sticky top-0 bg-[var(--bg-elevated)] z-10 rounded-t-2xl">
+      <div className="bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded-2xl w-full max-w-lg shadow-2xl my-auto flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between p-6 border-b border-[var(--border-lightest)] sticky top-0 bg-[var(--bg-elevated)] z-10 rounded-t-2xl shrink-0">
           <div className="flex items-center gap-2">
             <Stethoscope className="w-4 h-4 text-violet-600" />
             <h2 className="text-[var(--text-primary)] font-semibold">
@@ -128,7 +128,7 @@ function ModalDentista({
             <X className="w-4 h-4" />
           </button>
         </div>
-        <form onSubmit={submit} className="p-6 space-y-4 bg-[var(--bg-elevated)]">
+        <form onSubmit={submit} className="p-6 space-y-4 bg-[var(--bg-elevated)] overflow-y-auto flex-1">
           {erro && (
             <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
@@ -340,8 +340,8 @@ function ModalRegistarPagamento({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center p-4 py-8 bg-black/50 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded-2xl w-full max-w-lg shadow-2xl my-auto">
-        <div className="flex items-center justify-between p-5 border-b border-[var(--border-lightest)]">
+      <div className="bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded-2xl w-full max-w-lg shadow-2xl my-auto flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between p-5 border-b border-[var(--border-lightest)] shrink-0">
           <div className="flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-emerald-600" />
             <h2 className="text-[var(--text-primary)] font-bold">Registar Pagamento</h2>
@@ -1502,7 +1502,7 @@ function ModalFuncionario({ onClose, onSuccess }: { onClose: () => void; onSucce
 
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 py-8 bg-black/50 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded-2xl w-full max-w-lg shadow-2xl my-auto">
+      <div className="bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded-2xl w-full max-w-lg shadow-2xl my-auto flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between p-6 border-b border-[var(--border-lightest)] shrink-0">
           <div className="flex items-center gap-2">
             <UserCog className="w-4 h-4 text-emerald-600" />
@@ -1512,7 +1512,7 @@ function ModalFuncionario({ onClose, onSuccess }: { onClose: () => void; onSucce
             <X className="w-4 h-4" />
           </button>
         </div>
-        <form onSubmit={submit} className="p-6 space-y-4 bg-[var(--bg-elevated)] overflow-y-auto">
+        <form onSubmit={submit} className="p-6 space-y-4 bg-[var(--bg-elevated)] overflow-y-auto flex-1">
           {erro && (
             <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
