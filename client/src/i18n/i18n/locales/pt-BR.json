@@ -1,0 +1,194 @@
+{
+  "nav": {
+    "categories": {
+      "visao-geral": "Visão Geral",
+      "gestao-clinica": "Gestão Clínica",
+      "administrativo": "Administrativo",
+      "marketing-ia": "Marketing & IA",
+      "configuracoes": "Configurações"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "agenda": "Agenda",
+      "ligacoes": "Ligações Pendentes",
+      "utentes": "Pacientes",
+      "odontograma": "Odontograma",
+      "imagiologia": "Imaginologia",
+      "anamnese": "Anamnese Digital",
+      "financeiro": "Financeiro",
+      "faturacao": "Faturamento",
+      "stocks": "Estoque",
+      "equipa": "Equipe",
+      "laboratorios": "Laboratórios",
+      "marketing": "WhatsApp Marketing",
+      "redes-sociais": "Redes Sociais",
+      "assistente-ia": "Assistente IA",
+      "ia-preditiva": "IA Preditiva",
+      "voice-briefing": "Voice Briefing",
+      "alertas": "Alertas de Saúde",
+      "health-score": "Score de Saúde",
+      "conectores": "Conectores",
+      "sistema": "Sistema",
+      "whatsapp": "WhatsApp",
+      "permissoes": "Permissões",
+      "termos": "Termos de Consentimento"
+    },
+    "actions": {
+      "notifications": "Notificações",
+      "logout": "Sair",
+      "collapse": "Recolher",
+      "expand": "Expandir",
+      "search": "Pesquisar...",
+      "lightMode": "Mudar para Modo Claro",
+      "darkMode": "Mudar para Modo Escuro"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Centro de comando da clínica",
+    "tabs": {
+      "overview": "Visão Geral",
+      "report": "Relatório",
+      "activities": "Atividades",
+      "configure": "Configurar"
+    },
+    "metrics": {
+      "consultationsToday": "Consultas Hoje",
+      "confirmed": "confirmadas",
+      "pending": "pendentes",
+      "totalPatients": "Total Pacientes",
+      "newThisMonth": "novos este mês",
+      "monthlyRevenue": "Receita do Mês",
+      "vsLastMonth": "vs mês anterior",
+      "retentionRate": "Taxa de Retenção",
+      "patientsLast6Months": "Pacientes com consulta nos últimos 6 meses",
+      "annualRevenue": "Receita Anual",
+      "inTreatment": "Em Tratamento",
+      "tomorrow": "Amanhã",
+      "pendingCollection": "Pendente Cobrar",
+      "confirmation": "Confirmação",
+      "criticalAlerts": "Alertas Críticos"
+    },
+    "shortcuts": {
+      "title": "Atalhos Rápidos",
+      "newConsultation": "Nova Consulta",
+      "scheduleConsultation": "Agendar consulta",
+      "newPatient": "Novo Paciente",
+      "registerPatient": "Cadastrar paciente",
+      "sendWhatsapp": "Enviar WhatsApp",
+      "massCampaigns": "Campanhas em massa",
+      "viewAlerts": "Ver Alertas",
+      "patientsAtRisk": "Pacientes em risco",
+      "reports": "Relatórios",
+      "dataAnalysis": "Análise de dados"
+    },
+    "sections": {
+      "upcomingConsultations": "Próximas Consultas — Hoje",
+      "noConsultationsToday": "Sem consultas agendadas para hoje",
+      "priorityAlerts": "Alertas Prioritários",
+      "lastBackup": "Último backup",
+      "revenueLast30Days": "Receita — Últimos 30 dias",
+      "noData": "Sem dados",
+      "revenue": "Receita",
+      "dailyGoal": "Meta diária",
+      "consultationsByStatus": "Consultas de Hoje por Status",
+      "total": "total",
+      "statusConfirmed": "Confirmadas",
+      "statusPending": "Pendentes",
+      "statusCompleted": "Realizadas",
+      "statusCanceled": "Canceladas"
+    }
+  },
+  "settings": {
+    "system": {
+      "title": "Configurações do Sistema",
+      "subtitle": "Todas as configurações da clínica em um só lugar. As alterações se propagam automaticamente.",
+      "autoSync": "Auto-Sync Ativo",
+      "os": "Sistema Operacional",
+      "tabs": {
+        "clinic": "Clínica",
+        "agenda": "Agenda & Metas",
+        "appearance": "Aparência",
+        "notifications": "Notificações",
+        "security": "Segurança",
+        "integrations": "Integrações",
+        "billing": "Faturamento",
+        "data": "Dados"
+      },
+      "appearance": {
+        "localization": {
+          "title": "Localização",
+          "subtitle": "Idioma, moeda e fuso horário",
+          "language": "Idioma",
+          "timezone": "Fuso Horário",
+          "currency": "Moeda",
+          "currencySymbol": "Símbolo da Moeda",
+          "autoUpdated": "Atualizado automaticamente"
+        },
+        "formats": {
+          "title": "Formatos",
+          "subtitle": "Como datas e horas são apresentadas",
+          "dateFormat": "Formato de Data",
+          "timeFormat": "Formato de Hora",
+          "preview": "Pré-visualização"
+        },
+        "theme": {
+          "title": "Tema Visual",
+          "subtitle": "Escolha entre modo escuro ou claro",
+          "dark": "Escuro",
+          "light": "Claro"
+        },
+        "background": {
+          "title": "Efeito de Fundo",
+          "subtitle": "Ondas animadas suaves ou fundo liso",
+          "description": "Escolha o estilo visual do fundo do aplicativo. As ondas animadas criam um efeito elegante inspirado no design Nano Banana.",
+          "waves": "Ondas Animadas",
+          "wavesDesc": "Efeito suave cyan + violet",
+          "plain": "Fundo Liso",
+          "plainDesc": "Sem efeitos visuais"
+        }
+      },
+      "save": "Salvar Alterações"
+    }
+  },
+  "common": {
+    "address": "Endereço",
+    "zipCode": "CEP",
+    "taxId": "CPF/CNPJ",
+    "invoice": "Nota Fiscal",
+    "receipt": "Recibo",
+    "phone": "Telefone",
+    "cellphone": "Celular",
+    "email": "E-mail",
+    "city": "Cidade",
+    "state": "Estado",
+    "country": "País",
+    "loading": "Carregando...",
+    "error": "Ocorreu um erro",
+    "success": "Sucesso",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "add": "Adicionar",
+    "new": "Novo",
+    "search": "Pesquisar",
+    "filter": "Filtrar",
+    "actions": "Ações",
+    "status": "Status",
+    "date": "Data",
+    "time": "Hora",
+    "user": "Usuário",
+    "patient": "Paciente",
+    "doctor": "Dentista",
+    "treatment": "Tratamento",
+    "price": "Preço",
+    "total": "Total",
+    "yes": "Sim",
+    "no": "Não",
+    "confirm": "Confirmar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "finish": "Concluir"
+  }
+}

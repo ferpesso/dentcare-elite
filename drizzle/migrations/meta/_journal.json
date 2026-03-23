@@ -1,0 +1,76 @@
+{
+    "version": "7",
+    "dialect": "mysql",
+    "entries": [
+        {
+            "idx": 0,
+            "version": "5",
+            "when": 1772543292517,
+            "tag": "0000_hesitant_firebrand",
+            "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "5",
+            "when": 1772629692517,
+            "tag": "0001_add_especialidades_evolucoes",
+            "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "5",
+            "when": 1772716092517,
+            "tag": "0002_add_laboratorios_envios",
+            "breakpoints": true
+        },
+        {
+            "idx": 3,
+            "version": "5",
+            "when": 1772802492517,
+            "tag": "0003_add_tipos_consulta_cor_medico",
+            "breakpoints": true
+        },
+        {
+            "idx": 4,
+            "version": "5",
+            "when": 1772888892517,
+            "tag": "0004_add_comissoes_medicos",
+            "breakpoints": true
+        },
+        {
+            "idx": 5,
+            "version": "5",
+            "when": 1772975292517,
+            "tag": "0005_add_materiais_envio_laboratorio",
+            "breakpoints": true
+        },
+        {
+            "idx": 6,
+            "version": "5",
+            "when": 1773061692517,
+            "tag": "0006_add_notificacoes_health_conversas_comunicacoes",
+            "breakpoints": true
+        },
+        {
+            "idx": 7,
+            "version": "5",
+            "when": 1773148092517,
+            "tag": "0007_add_pagamentos_comissoes",
+            "breakpoints": true
+        },
+        {
+            "idx": 8,
+            "version": "5",
+            "when": 1773234492517,
+            "tag": "0008_add_parcelas_pagamentos",
+            "breakpoints": true
+        },
+        {
+            "idx": 9,
+            "version": "5",
+            "when": 1773320892517,
+            "tag": "0009_sync_missing_columns",
+            "breakpoints": true
+        }
+    ]
+}

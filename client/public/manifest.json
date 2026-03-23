@@ -1,0 +1,26 @@
+{
+  "name": "DentCare Elite - Gestão Clínica",
+  "short_name": "DentCare",
+  "description": "Sistema de gestão clínica dentária com suporte offline",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050A14",
+  "theme_color": "#050A14",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logos/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logos/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["medical", "productivity", "business"],
+  "lang": "pt-PT"
+}

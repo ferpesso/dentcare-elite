@@ -1,0 +1,54 @@
+# Variaveis de ambiente - NUNCA versionar
+.env
+.env.*
+!.env.example
+# Dependencias
+node_modules/
+
+# Build de producao
+dist/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Ficheiros de sistema
+.DS_Store
+Thumbs.db
+
+# Ficheiros temporarios e de desenvolvimento
+*.tmp
+*.bak
+*.backup
+ziY9hWX7
+
+# Backups
+*.json.backup
+dentcare_backup_*.json
+
+# Ficheiros de teste e utilitarios de desenvolvimento
+check_db.ts
+test_db.ts
+test-db-connection.ts
+gen_session.ts
+gen-token.mjs
+ensure_db.js
+migrate_manual.ts
+original.txt
+novo.txt
+CHANGES-SUMMARY.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Uploads temporarios
+uploads/temp/
+
+# Coverage de testes
+coverage/
+.nyc_output/

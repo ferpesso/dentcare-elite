@@ -1,0 +1,194 @@
+{
+  "nav": {
+    "categories": {
+      "visao-geral": "Overview",
+      "gestao-clinica": "Clinical Management",
+      "administrativo": "Administrative",
+      "marketing-ia": "Marketing & AI",
+      "configuracoes": "Settings"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "agenda": "Calendar",
+      "ligacoes": "Pending Calls",
+      "utentes": "Patients",
+      "odontograma": "Odontogram",
+      "imagiologia": "Imaging",
+      "anamnese": "Digital Anamnesis",
+      "financeiro": "Financial",
+      "faturacao": "Billing",
+      "stocks": "Inventory",
+      "equipa": "Team",
+      "laboratorios": "Laboratories",
+      "marketing": "WhatsApp Marketing",
+      "redes-sociais": "Social Media",
+      "assistente-ia": "AI Assistant",
+      "ia-preditiva": "Predictive AI",
+      "voice-briefing": "Voice Briefing",
+      "alertas": "Health Alerts",
+      "health-score": "Health Score",
+      "conectores": "Connectors",
+      "sistema": "System",
+      "whatsapp": "WhatsApp",
+      "permissoes": "Permissions",
+      "termos": "Consent Terms"
+    },
+    "actions": {
+      "notifications": "Notifications",
+      "logout": "Log Out",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "search": "Search...",
+      "lightMode": "Switch to Light Mode",
+      "darkMode": "Switch to Dark Mode"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Clinic command center",
+    "tabs": {
+      "overview": "Overview",
+      "report": "Report",
+      "activities": "Activities",
+      "configure": "Configure"
+    },
+    "metrics": {
+      "consultationsToday": "Consultations Today",
+      "confirmed": "confirmed",
+      "pending": "pending",
+      "totalPatients": "Total Patients",
+      "newThisMonth": "new this month",
+      "monthlyRevenue": "Monthly Revenue",
+      "vsLastMonth": "vs last month",
+      "retentionRate": "Retention Rate",
+      "patientsLast6Months": "Patients with consultation in last 6 months",
+      "annualRevenue": "Annual Revenue",
+      "inTreatment": "In Treatment",
+      "tomorrow": "Tomorrow",
+      "pendingCollection": "Pending Collection",
+      "confirmation": "Confirmation",
+      "criticalAlerts": "Critical Alerts"
+    },
+    "shortcuts": {
+      "title": "Quick Shortcuts",
+      "newConsultation": "New Consultation",
+      "scheduleConsultation": "Schedule consultation",
+      "newPatient": "New Patient",
+      "registerPatient": "Register patient",
+      "sendWhatsapp": "Send WhatsApp",
+      "massCampaigns": "Mass campaigns",
+      "viewAlerts": "View Alerts",
+      "patientsAtRisk": "Patients at risk",
+      "reports": "Reports",
+      "dataAnalysis": "Data analysis"
+    },
+    "sections": {
+      "upcomingConsultations": "Upcoming Consultations — Today",
+      "noConsultationsToday": "No consultations scheduled for today",
+      "priorityAlerts": "Priority Alerts",
+      "lastBackup": "Last backup",
+      "revenueLast30Days": "Revenue — Last 30 days",
+      "noData": "No data",
+      "revenue": "Revenue",
+      "dailyGoal": "Daily goal",
+      "consultationsByStatus": "Today's Consultations by Status",
+      "total": "total",
+      "statusConfirmed": "Confirmed",
+      "statusPending": "Pending",
+      "statusCompleted": "Completed",
+      "statusCanceled": "Canceled"
+    }
+  },
+  "settings": {
+    "system": {
+      "title": "System Settings",
+      "subtitle": "All clinic settings in one place. Changes propagate automatically.",
+      "autoSync": "Auto-Sync Active",
+      "os": "Operating System",
+      "tabs": {
+        "clinic": "Clinic",
+        "agenda": "Calendar & Goals",
+        "appearance": "Appearance",
+        "notifications": "Notifications",
+        "security": "Security",
+        "integrations": "Integrations",
+        "billing": "Billing",
+        "data": "Data"
+      },
+      "appearance": {
+        "localization": {
+          "title": "Localization",
+          "subtitle": "Language, currency and timezone",
+          "language": "Language",
+          "timezone": "Timezone",
+          "currency": "Currency",
+          "currencySymbol": "Currency Symbol",
+          "autoUpdated": "Updated automatically"
+        },
+        "formats": {
+          "title": "Formats",
+          "subtitle": "How dates and times are displayed",
+          "dateFormat": "Date Format",
+          "timeFormat": "Time Format",
+          "preview": "Preview"
+        },
+        "theme": {
+          "title": "Visual Theme",
+          "subtitle": "Choose between dark or light mode",
+          "dark": "Dark",
+          "light": "Light"
+        },
+        "background": {
+          "title": "Background Effect",
+          "subtitle": "Smooth animated waves or plain background",
+          "description": "Choose the visual style of the application background. The animated waves create an elegant effect inspired by the Nano Banana design.",
+          "waves": "Animated Waves",
+          "wavesDesc": "Smooth cyan + violet effect",
+          "plain": "Plain Background",
+          "plainDesc": "No visual effects"
+        }
+      },
+      "save": "Save Changes"
+    }
+  },
+  "common": {
+    "address": "Address",
+    "zipCode": "Zip Code",
+    "taxId": "Tax ID",
+    "invoice": "Invoice",
+    "receipt": "Receipt",
+    "phone": "Phone",
+    "cellphone": "Cell Phone",
+    "email": "Email",
+    "city": "City",
+    "state": "State",
+    "country": "Country",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "new": "New",
+    "search": "Search",
+    "filter": "Filter",
+    "actions": "Actions",
+    "status": "Status",
+    "date": "Date",
+    "time": "Time",
+    "user": "User",
+    "patient": "Patient",
+    "doctor": "Dentist",
+    "treatment": "Treatment",
+    "price": "Price",
+    "total": "Total",
+    "yes": "Yes",
+    "no": "No",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish"
+  }
+}
