@@ -29,7 +29,7 @@ import {
   Smartphone, Package,
   CalendarClock, Percent,
   ChevronRight, Activity, Receipt, Banknote,
-  Users, BellRing,
+  Users, BellRing, Scan, FolderOpen, XCircle, ImageIcon,
 } from "lucide-react";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -273,6 +273,18 @@ export function SistemaPage() {
   const deduplicarMutation = trpc.migracao.deduplicar.useMutation();
   const initialLoadDone = useRef(false);
 
+  // ── Estado do modal Imaginasoft ──────────────────────────────────────────
+  const [showImaginasoftModal, setShowImaginasoftModal] = useState(false);
+  const [imaginasoftFicheiro, setImaginasoftFicheiro] = useState<File | null>(null);
+  const [imaginasoftEstado, setImaginasoftEstado] = useState<"selecao" | "analisando" | "preview" | "importando" | "resultado">("selecao");
+  const [imaginasoftAnalise, setImaginasoftAnalise] = useState<any>(null);
+  const [imaginasoftResultado, setImaginasoftResultado] = useState<any>(null);
+  const [imaginasoftErro, setImaginasoftErro] = useState("");
+  const [imaginasoftImportarRx, setImaginasoftImportarRx] = useState(true);
+  const [imaginasoftSessaoId, setImaginasoftSessaoId] = useState("");
+  const [imaginasoftProgresso, setImaginasoftProgresso] = useState<{ percentagem: number; mensagem: string } | null>(null);
+  const imaginasoftProgressoRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // ── Estado 2FA real ──────────────────────────────────────────────────────
   const [show2FAModal, setShow2FAModal] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
@@ -424,6 +436,78 @@ export function SistemaPage() {
     "faturacao_serie", "faturacao_proximo_numero", "faturacao_taxa_iva",
     "faturacao_observacoes_padrao", "faturacao_vencimento_dias",
   ];
+  const CHAVES_INTEGRACOES_RX = [
+    "sistema_rx_nome", "sistema_rx_caminho", "sistema_rx_ativo",
+  ];
+
+  // Handler: analisar backup Imaginasoft via Express (multipart)
+  const handleAnalisarImaginasoft = async () => {
+    if (!imaginasoftFicheiro) return;
+    setImaginasoftEstado("analisando");
+    setImaginasoftErro("");
+    try {
+      const formData = new FormData();
+      formData.append("backup", imaginasoftFicheiro);
+      const resp = await fetch("/api/upload-imaginasoft/analisar", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Erro ao analisar backup");
+      setImaginasoftAnalise(data);
+      setImaginasoftSessaoId(data.sessaoId || "");
+      setImaginasoftEstado("preview");
+    } catch (err: any) {
+      setImaginasoftErro(err.message || "Erro ao analisar backup");
+      setImaginasoftEstado("selecao");
+    }
+  };
+
+  // Handler: executar importação Imaginasoft (com polling de progresso)
+  const handleImportarImaginasoft = async () => {
+    if (!imaginasoftSessaoId) return;
+    setImaginasoftEstado("importando");
+    setImaginasoftErro("");
+    setImaginasoftProgresso({ percentagem: 0, mensagem: "A iniciar importação..." });
+
+    // Iniciar polling de progresso
+    if (imaginasoftProgressoRef.current) clearInterval(imaginasoftProgressoRef.current);
+    imaginasoftProgressoRef.current = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/upload-imaginasoft/progresso/${imaginasoftSessaoId}`, { credentials: "include" });
+        if (r.ok) {
+          const p = await r.json();
+          setImaginasoftProgresso({ percentagem: p.percentagem || 0, mensagem: p.mensagem || "" });
+          if (p.estado === "concluido" || p.estado === "erro") {
+            if (imaginasoftProgressoRef.current) clearInterval(imaginasoftProgressoRef.current);
+          }
+        }
+      } catch { /* ignorar erros de polling */ }
+    }, 1500);
+
+    try {
+      const resp = await fetch("/api/upload-imaginasoft/importar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          sessaoId: imaginasoftSessaoId,
+          opcoes: { importarRx: imaginasoftImportarRx, deduplicar: true },
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Erro ao importar");
+      setImaginasoftResultado(data);
+      setImaginasoftEstado("resultado");
+    } catch (err: any) {
+      setImaginasoftErro(err.message || "Erro ao importar backup");
+      setImaginasoftEstado("preview");
+    } finally {
+      if (imaginasoftProgressoRef.current) clearInterval(imaginasoftProgressoRef.current);
+      setImaginasoftProgresso(null);
+    }
+  };
 
   // Backup
   const criarBackupMutation = trpc.system.criarBackup.useMutation({
@@ -1046,7 +1130,70 @@ export function SistemaPage() {
             )}
           </div>
 
-          <SaveButton onClick={() => guardarSeccao(CHAVES_INTEGRACOES)} loading={atualizarLoteMutation.isPending} saved={!!savedSections.integracoes} />
+          {/* Sistema de Raio-X */}
+          <div className={`card-premium p-5 space-y-4 border ${getBool("sistema_rx_ativo") ? "border-orange-500/20" : "border-[var(--border-lighter)]"}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg ${getBool("sistema_rx_ativo") ? "bg-orange-500/10 border-orange-500/20" : "bg-[var(--bg-overlay)] border-[var(--border-light)]"} border flex items-center justify-center`}>
+                  <Scan className={`w-4 h-4 ${getBool("sistema_rx_ativo") ? "text-orange-400" : "text-[var(--text-muted)]"}`} />
+                </div>
+                <div>
+                  <p className="text-[var(--text-primary)] text-sm font-semibold">Sistema de Raio-X</p>
+                  <p className="text-[var(--text-muted)] text-xs">Integração com software de imagiologia (MyRay, Trophy, VisioDei, etc.)</p>
+                </div>
+              </div>
+              <Toggle activo={getBool("sistema_rx_ativo")} onChange={() => toggleBool("sistema_rx_ativo")} />
+            </div>
+            {getBool("sistema_rx_ativo") && (
+              <div className="space-y-3 pt-2 border-t border-[var(--border-lighter)]">
+                <div>
+                  <label className="section-label block mb-1.5">Software de RX</label>
+                  <select
+                    value={lc.sistema_rx_nome}
+                    onChange={e => setC("sistema_rx_nome", e.target.value)}
+                    className="w-full bg-[var(--bg-overlay)] border border-[var(--border-light)] rounded-xl px-3 py-2.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-orange-500/50 transition-colors appearance-none cursor-pointer"
+                  >
+                    <option value="">-- Selecione o software --</option>
+                    <option value="MyRay">MyRay (Cefla / Neowise)</option>
+                    <option value="Trophy">Trophy Imaging</option>
+                    <option value="VisioDei">VisioDei</option>
+                    <option value="Sidexis">Sidexis (Sirona)</option>
+                    <option value="DbsWin">DbsWin</option>
+                    <option value="ClinView">ClinView</option>
+                    <option value="DigiXVis">DigiXVis</option>
+                    <option value="Schick">Schick (Dentsply)</option>
+                    <option value="Sopro">Sopro</option>
+                    <option value="MediaDe">MediaDe</option>
+                    <option value="EasyDent">EasyDent</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                  <p className="text-[var(--text-muted)] text-[10px] mt-1">Selecione o software de RX instalado na clínica</p>
+                </div>
+                <div>
+                  <label className="section-label block mb-1.5">Caminho do Programa</label>
+                  <div className="relative">
+                    <FolderOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-muted)]" />
+                    <input
+                      type="text"
+                      value={lc.sistema_rx_caminho}
+                      onChange={e => setC("sistema_rx_caminho", e.target.value)}
+                      placeholder="Ex: C:\Program Files\Cefla\Neowise\diagnostic-viewer\bridge\\"
+                      className="w-full bg-[var(--bg-overlay)] border border-[var(--border-light)] rounded-xl pl-9 pr-3 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-orange-500/50 transition-colors font-mono"
+                    />
+                  </div>
+                  <p className="text-[var(--text-muted)] text-[10px] mt-1">Caminho completo para a pasta ou executável do software de RX no computador</p>
+                </div>
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-orange-500/5 border border-orange-500/15">
+                  <Scan className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
+                  <p className="text-orange-300/80 text-xs">
+                    Este caminho é usado durante a importação do backup Imaginasoft para localizar as imagens de Raio-X. Pode ser alterado a qualquer momento para outras clínicas com software diferente.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <SaveButton onClick={() => guardarSeccao([...CHAVES_INTEGRACOES, ...CHAVES_INTEGRACOES_RX])} loading={atualizarLoteMutation.isPending} saved={!!savedSections.integracoes} />
         </div>
       )}
 
@@ -1214,13 +1361,30 @@ export function SistemaPage() {
                 </div>
               </button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-1 gap-3 mt-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
               <button onClick={() => { setShowImportModal(true); setImportTipo("json"); setImportEstado("upload"); setImportErro(""); setImportResultado(null); setImportFicheiro(null); }}
                 className="flex items-center gap-2 p-4 rounded-xl bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/15 transition-colors">
                 <HardDrive className="w-4 h-4 text-violet-400" />
                 <div className="text-left">
                   <p className="text-violet-300 text-sm font-semibold">Importar Backup DentCare</p>
                   <p className="text-violet-400/60 text-[10px]">Ficheiro .json de backup de outra instalação DentCare</p>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  setShowImaginasoftModal(true);
+                  setImaginasoftEstado("selecao");
+                  setImaginasoftFicheiro(null);
+                  setImaginasoftAnalise(null);
+                  setImaginasoftResultado(null);
+                  setImaginasoftErro("");
+                  setImaginasoftSessaoId("");
+                }}
+                className="flex items-center gap-2 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/15 transition-colors">
+                <Scan className="w-4 h-4 text-orange-400" />
+                <div className="text-left">
+                  <p className="text-orange-300 text-sm font-semibold">Importar Backup Imaginasoft</p>
+                  <p className="text-orange-400/60 text-[10px]">Ficheiro .zip do NewSoft DS / Imaginasoft</p>
                 </div>
               </button>
             </div>
@@ -1623,6 +1787,288 @@ export function SistemaPage() {
                       Fechar
                     </button>
                     <button onClick={() => { navigate('/utentes'); }}
+                      className="flex-1 btn-primary py-3 rounded-xl text-sm font-semibold">
+                      Ver Utentes Importados
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          MODAL IMPORTAÇÃO IMAGINASOFT
+      ══════════════════════════════════════════════════════════════════════ */}
+      {showImaginasoftModal && (
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 py-8 bg-black/60 backdrop-blur-sm overflow-y-auto" onClick={() => setShowImaginasoftModal(false)}>
+          <div className="relative w-full max-w-2xl rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-light)] shadow-2xl my-auto" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-[var(--border-lightest)]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                  <Scan className="w-5 h-5 text-orange-400" />
+                </div>
+                <div>
+                  <h2 className="text-[var(--text-primary)] font-bold text-lg">Importar Backup Imaginasoft</h2>
+                  <p className="text-[var(--text-muted)] text-xs">NewSoft DS / Imaginasoft Healthcare Solutions — Ficheiro .zip</p>
+                </div>
+              </div>
+              <button onClick={() => setShowImaginasoftModal(false)} className="w-8 h-8 rounded-lg bg-[var(--bg-overlay)] hover:bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--text-secondary)] transition-colors">
+                <span className="text-lg">&times;</span>
+              </button>
+            </div>
+
+            {/* Barra de Progresso */}
+            <div className="flex gap-1.5 px-6 pt-4">
+              {(["selecao", "preview", "resultado"] as const).map((etapa, i) => (
+                <div key={etapa} className={`flex-1 h-1.5 rounded-full transition-all ${
+                  ["selecao", "analisando", "preview", "importando", "resultado"].indexOf(imaginasoftEstado) >= ["selecao", "preview", "resultado"].indexOf(etapa)
+                    ? "bg-orange-500" : "bg-[var(--bg-overlay)]"
+                }`} />
+              ))}
+            </div>
+
+            <div className="p-6">
+              {/* Erro */}
+              {imaginasoftErro && (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 mb-4">
+                  <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+                  <p className="text-red-400 text-sm">{imaginasoftErro}</p>
+                </div>
+              )}
+
+              {/* Etapa: Selecção do ficheiro */}
+              {(imaginasoftEstado === "selecao" || imaginasoftEstado === "analisando") && (
+                <div className="space-y-4">
+                  <div
+                    className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+                      imaginasoftFicheiro ? "border-orange-500/50 bg-orange-500/5" : "border-[var(--border-light)] hover:border-orange-500/50"
+                    }`}
+                    onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+                    onDrop={e => {
+                      e.preventDefault(); e.stopPropagation();
+                      const f = e.dataTransfer.files?.[0];
+                      if (f && f.name.toLowerCase().endsWith(".zip")) { setImaginasoftFicheiro(f); setImaginasoftErro(""); }
+                      else setImaginasoftErro("Apenas ficheiros .zip são aceites.");
+                    }}
+                  >
+                    <Scan className="w-10 h-10 text-orange-400/50 mx-auto mb-3" />
+                    <h3 className="text-[var(--text-primary)] font-semibold text-sm mb-1">Arraste o ficheiro .zip aqui</h3>
+                    <p className="text-[var(--text-muted)] text-xs mb-4">ou clique para selecionar o backup do Imaginasoft</p>
+                    {imaginasoftFicheiro && (
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/20 mb-3">
+                        <HardDrive className="w-3 h-3 text-orange-400" />
+                        <span className="text-orange-300 text-xs font-medium">{imaginasoftFicheiro.name}</span>
+                        <span className="text-orange-400/60 text-[10px]">({(imaginasoftFicheiro.size / 1024 / 1024).toFixed(1)} MB)</span>
+                      </div>
+                    )}
+                    <div>
+                      <input
+                        type="file"
+                        id="imaginasoft-file-input"
+                        className="hidden"
+                        accept=".zip,application/zip,application/x-zip-compressed"
+                        onChange={e => {
+                          const f = e.target.files?.[0];
+                          if (f) { setImaginasoftFicheiro(f); setImaginasoftErro(""); }
+                        }}
+                      />
+                      <label htmlFor="imaginasoft-file-input"
+                        className="inline-block px-5 py-2.5 bg-orange-500/20 border border-orange-500/30 text-orange-300 rounded-xl text-sm font-semibold hover:bg-orange-500/30 transition-colors cursor-pointer">
+                        Selecionar Ficheiro .zip
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2 p-3 rounded-xl bg-[var(--bg-overlay)] border border-[var(--border-lightest)]">
+                    <Info className="w-4 h-4 text-[var(--text-muted)] shrink-0 mt-0.5" />
+                    <div className="text-[var(--text-muted)] text-xs space-y-1">
+                      <p><strong className="text-[var(--text-secondary)]">Backup Imaginasoft (NewSoft DS):</strong> Selecione o ficheiro .zip gerado pelo sistema de backup do Imaginasoft.</p>
+                      <p>O sistema irá importar os dados dos utentes e as imagens de Raio-X. As fotos de perfil serão ignoradas.</p>
+                      <p>Utentes já existentes (mesmo NIF) não serão duplicados.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button onClick={() => setShowImaginasoftModal(false)}
+                      className="flex-1 py-3 rounded-xl border border-[var(--border-light)] text-[var(--text-secondary)] text-sm font-semibold hover:bg-[var(--bg-overlay)] transition-all">
+                      Cancelar
+                    </button>
+                    <button
+                      disabled={!imaginasoftFicheiro || imaginasoftEstado === "analisando"}
+                      onClick={handleAnalisarImaginasoft}
+                      className="flex-1 btn-primary py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
+                      {imaginasoftEstado === "analisando"
+                        ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> A analisar backup...</>
+                        : <><Scan className="w-4 h-4" /> Analisar Backup</>}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Etapa: Preview da análise */}
+              {imaginasoftEstado === "preview" && imaginasoftAnalise && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <p className="text-emerald-300 text-sm font-semibold">Backup analisado com sucesso!</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-center">
+                      <p className="text-orange-400 text-2xl font-black">{imaginasoftAnalise.totalUtentes ?? 0}</p>
+                      <p className="text-orange-400/60 text-[10px] font-semibold uppercase tracking-wider">Utentes</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-center">
+                      <p className="text-cyan-400 text-2xl font-black">{imaginasoftAnalise.totalImagensRx ?? 0}</p>
+                      <p className="text-cyan-400/60 text-[10px] font-semibold uppercase tracking-wider">Imagens RX</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-teal-500/10 border border-teal-500/20 text-center">
+                      <p className="text-teal-400 text-2xl font-black">{imaginasoftAnalise.totalDocumentos ?? 0}</p>
+                      <p className="text-teal-400/60 text-[10px] font-semibold uppercase tracking-wider">Documentos</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-lightest)] text-center">
+                      <p className="text-[var(--text-muted)] text-2xl font-black">{imaginasoftAnalise.totalFotosPerfil ?? 0}</p>
+                      <p className="text-[var(--text-muted)]/60 text-[10px] font-semibold uppercase tracking-wider">Fotos Perfil</p>
+                    </div>
+                  </div>
+
+                  {imaginasoftAnalise.sistemaRxDetectado && (
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-orange-500/5 border border-orange-500/15">
+                      <Scan className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-orange-300/80 text-xs">
+                          Sistema de RX detectado: <strong className="text-orange-300">{imaginasoftAnalise.sistemaRxDetectado}</strong>
+                        </p>
+                        {imaginasoftAnalise.caminhoRxDetectado && (
+                          <p className="text-orange-400/60 text-[10px] mt-0.5 font-mono">{imaginasoftAnalise.caminhoRxDetectado}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-start gap-2 p-3 rounded-xl bg-[var(--bg-overlay)] border border-[var(--border-lightest)]">
+                    <XCircle className="w-4 h-4 text-[var(--text-muted)] shrink-0 mt-0.5" />
+                    <p className="text-[var(--text-muted)] text-xs">
+                      As <strong>{imaginasoftAnalise.totalFotosPerfil ?? 0} fotos de perfil</strong> dos utentes serão ignoradas (não importadas), conforme solicitado.
+                    </p>
+                  </div>
+
+                  <div className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                    imaginasoftImportarRx ? "bg-cyan-500/5 border-cyan-500/20" : "bg-[var(--bg-surface)] border-[var(--border-lightest)]"
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className={`w-4 h-4 ${imaginasoftImportarRx ? "text-cyan-400" : "text-[var(--text-muted)]"}`} />
+                      <div>
+                        <p className="text-[var(--text-primary)] text-sm font-medium">Importar imagens de Raio-X</p>
+                        <p className="text-[var(--text-muted)] text-xs">{imaginasoftAnalise.totalImagensRx ?? 0} imagens encontradas na pasta Captura/{imaginasoftAnalise.tamanhoTotalImagens ? ` (${(imaginasoftAnalise.tamanhoTotalImagens / 1024 / 1024).toFixed(1)} MB)` : ""}</p>
+                      </div>
+                    </div>
+                    <Toggle activo={imaginasoftImportarRx} onChange={() => setImaginasoftImportarRx(v => !v)} />
+                  </div>
+
+                  {imaginasoftAnalise.avisos?.length > 0 && (
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                      <p className="text-amber-400 text-xs font-semibold mb-1">Avisos ({imaginasoftAnalise.avisos.length})</p>
+                      <div className="max-h-24 overflow-y-auto space-y-0.5">
+                        {imaginasoftAnalise.avisos.slice(0, 5).map((a: string, i: number) => (
+                          <p key={i} className="text-amber-300/70 text-[10px]">{a}</p>
+                        ))}
+                        {imaginasoftAnalise.avisos.length > 5 && (
+                          <p className="text-amber-300/50 text-[10px]">... e mais {imaginasoftAnalise.avisos.length - 5} avisos</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Barra de progresso durante importação */}
+                  {(imaginasoftEstado as string) === "importando" && imaginasoftProgresso && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-[var(--text-secondary)] font-medium">{imaginasoftProgresso.mensagem}</span>
+                        <span className="text-orange-400 font-bold">{Math.round(imaginasoftProgresso.percentagem)}%</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-[var(--bg-overlay)] overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-orange-500 to-cyan-500 transition-all duration-500"
+                          style={{ width: `${Math.min(imaginasoftProgresso.percentagem, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button onClick={() => { setImaginasoftEstado("selecao"); setImaginasoftAnalise(null); }}
+                      disabled={(imaginasoftEstado as string) === "importando"}
+                      className="flex-1 py-3 rounded-xl border border-[var(--border-light)] text-[var(--text-secondary)] text-sm font-semibold hover:bg-[var(--bg-overlay)] transition-all disabled:opacity-50">
+                      Voltar
+                    </button>
+                    <button
+                      disabled={(imaginasoftEstado as string) === "importando"}
+                      onClick={handleImportarImaginasoft}
+                      className="flex-1 btn-primary py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
+                      {(imaginasoftEstado as string) === "importando"
+                        ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> A importar dados...</>
+                        : <><CheckCircle2 className="w-4 h-4" /> Executar Importação</>}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Etapa: Resultado */}
+              {imaginasoftEstado === "resultado" && imaginasoftResultado && (
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-[var(--text-primary)] font-bold text-lg">Importação Concluída!</h3>
+                    <p className="text-[var(--text-muted)] text-sm mt-1">
+                      {imaginasoftResultado.mensagem || "Backup Imaginasoft importado com sucesso."}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <div className="p-2.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-center">
+                      <p className="text-orange-400 text-lg font-black">{imaginasoftResultado.utentesImportados ?? 0}</p>
+                      <p className="text-orange-400/60 text-[9px] font-semibold uppercase tracking-wider">Utentes Importados</p>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-center">
+                      <p className="text-cyan-400 text-lg font-black">{imaginasoftResultado.imagensImportadas ?? 0}</p>
+                      <p className="text-cyan-400/60 text-[9px] font-semibold uppercase tracking-wider">Imagens RX</p>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-lightest)] text-center">
+                      <p className="text-[var(--text-muted)] text-lg font-black">{imaginasoftResultado.utentesIgnorados ?? 0}</p>
+                      <p className="text-[var(--text-muted)]/60 text-[9px] font-semibold uppercase tracking-wider">Já Existiam</p>
+                    </div>
+                  </div>
+
+                  {imaginasoftResultado.utentesIgnorados > 0 && (
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/5 border border-amber-500/15">
+                      <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <p className="text-amber-300/80 text-xs">
+                        {imaginasoftResultado.utentesIgnorados} utentes já existiam na base de dados e não foram duplicados.
+                      </p>
+                    </div>
+                  )}
+
+                  {(imaginasoftResultado.imagensFalhadas ?? 0) > 0 && (
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-red-500/5 border border-red-500/15">
+                      <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                      <p className="text-red-300/80 text-xs">
+                        {imaginasoftResultado.imagensFalhadas} imagens não puderam ser importadas (ficheiro corrompido ou formato não suportado).
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button onClick={() => { setShowImaginasoftModal(false); setImaginasoftEstado("selecao"); setImaginasoftResultado(null); }}
+                      className="flex-1 py-3 rounded-xl border border-[var(--border-light)] text-[var(--text-secondary)] text-sm font-semibold hover:bg-[var(--bg-overlay)] transition-all">
+                      Fechar
+                    </button>
+                    <button onClick={() => { navigate("/utentes"); }}
                       className="flex-1 btn-primary py-3 rounded-xl text-sm font-semibold">
                       Ver Utentes Importados
                     </button>

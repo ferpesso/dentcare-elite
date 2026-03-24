@@ -19,14 +19,23 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { isMaster, isAdmin } from "../rbac";
 import { getDb } from "../db";
-import { utentes, consultas, tratamentos, faturas, medicos, auditLog } from "../../drizzle/schema";
+import { utentes, consultas, tratamentos, faturas, medicos, auditLog, imagiologia } from "../../drizzle/schema";
 import { SaftParser, ValidadorSaft } from "../services/saftParser";
+import { ImaginasoftImporter } from "../services/imaginasoftImporter";
 import { CsvImporter, ValidadorImportacao } from "../services/csvImporter";
 import { DeduplicationEngine } from "../services/deduplicationEngine";
 import { logAuditAction } from "../auditService";
-import { eq, and, or, sql } from "drizzle-orm";
+import { eq, and, or, sql, like } from "drizzle-orm";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────
+interface SessaoImaginasoft {
+  id: string;
+  timestamp: Date;
+  analise: any; // ImaginasoftAnalise
+}
+
+const sessoesImaginasoft = new Map<string, SessaoImaginasoft>();
+
 interface SessaoMigracao {
   id: string;
   timestamp: Date;
@@ -687,6 +696,331 @@ export const migracaoRouter = router({
         });
       }
     }),
+
+  /**
+   * Analisar backup Imaginasoft (ZIP) — Fase 1: apenas análise, sem importar dados
+   * Recebe o ZIP em Base64 (campo zipBase64) para compatibilidade com tRPC.
+   *
+   * NOTA: Para ficheiros grandes (>10 MB), usar a rota Express
+   * POST /api/upload-imaginasoft/analisar (multipart/form-data).
+   * Este endpoint tRPC é limitado pelo body parser (~50 MB).
+   */
+  analisarImaginasoft: protectedProcedure
+    .input(
+      z.object({
+        zipBase64: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      verificarPermissao(ctx.user);
+
+      try {
+        const buffer = Buffer.from(input.zipBase64, "base64");
+
+        // Aviso se o ficheiro for grande demais para tRPC
+        if (buffer.length > 50 * 1024 * 1024) {
+          throw new TRPCError({
+            code: "PAYLOAD_TOO_LARGE",
+            message: "Ficheiro demasiado grande para este endpoint. Use a rota Express /api/upload-imaginasoft/analisar.",
+          });
+        }
+
+        const analise = ImaginasoftImporter.analisarZip(buffer);
+
+        if (analise.erros.length > 0 && analise.totalUtentes === 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: analise.erros.join(" "),
+          });
+        }
+
+        const sessaoId = `imaginasoft_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        sessoesImaginasoft.set(sessaoId, {
+          id: sessaoId,
+          timestamp: new Date(),
+          analise,
+        });
+
+        await logAuditAction(ctx.user, {
+          acao: "IMAGINASOFT_ANALISADO",
+          tabela: "migracao",
+          registoId: 0,
+          descricao: `Backup Imaginasoft analisado: ${analise.totalUtentes} utentes, ${analise.totalImagensRx} imagens RX`,
+          valorNovo: {
+            sessaoId,
+            totalUtentes: analise.totalUtentes,
+            totalImagensRx: analise.totalImagensRx,
+            totalFotosPerfil: analise.totalFotosPerfil,
+            tamanhoTotalImagens: analise.tamanhoTotalImagens,
+            sistemaRx: analise.sistemaRxDetectado,
+          },
+        });
+
+        return {
+          sessaoId,
+          totalUtentes: analise.totalUtentes,
+          totalImagensRx: analise.totalImagensRx,
+          totalDocumentos: analise.totalDocumentos,
+          totalFotosPerfil: analise.totalFotosPerfil,
+          tamanhoTotalImagens: analise.tamanhoTotalImagens,
+          sistemaRxDetectado: analise.sistemaRxDetectado,
+          caminhoRxDetectado: analise.caminhoRxDetectado,
+          avisos: [...analise.avisos, ...analise.erros],
+          programaDetectado: "Imaginasoft",
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Erro ao analisar backup Imaginasoft: ${(error as Error).message}`,
+        });
+      }
+    }),
+
+  /**
+   * Executar importação real do backup Imaginasoft — Fase 2
+   *
+   * DEPRECATED: Este endpoint recebe o ZIP inteiro em Base64 via JSON, o que
+   * consome memória excessiva e falha para ficheiros grandes.
+   * Usar preferencialmente a rota Express POST /api/upload-imaginasoft/importar.
+   *
+   * Mantido para retrocompatibilidade com backups pequenos (<50 MB).
+   */
+  importarImaginasoft: protectedProcedure
+    .input(
+      z.object({
+        zipBase64: z.string(),
+        sessaoId: z.string(),
+        opcoes: z.object({
+          importarRx: z.boolean().default(true),
+          deduplicar: z.boolean().default(true),
+        }),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      verificarPermissao(ctx.user);
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "SERVICE_UNAVAILABLE", message: "Base de dados indisponível." });
+
+      try {
+        const buffer = Buffer.from(input.zipBase64, "base64");
+
+        // Aviso se o ficheiro for grande demais para tRPC
+        if (buffer.length > 50 * 1024 * 1024) {
+          throw new TRPCError({
+            code: "PAYLOAD_TOO_LARGE",
+            message: "Ficheiro demasiado grande para este endpoint. Use a rota Express /api/upload-imaginasoft/importar.",
+          });
+        }
+
+        const analise = ImaginasoftImporter.analisarZip(buffer);
+
+        if (analise.erros.length > 0 && analise.totalUtentes === 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: analise.erros.join(" "),
+          });
+        }
+
+        let utentesImportados = 0;
+        let utentesIgnorados = 0;
+        let imagensImportadas = 0;
+        let imagensFalhadas = 0;
+
+        const mapaUtentes = new Map<string, number>();
+
+        // ── FASE 1: Importar Utentes ──────────────────────────────────────
+        for (let i = 0; i < analise.utentes.length; i++) {
+          const u = analise.utentes[i];
+          try {
+            let utenteExistente: { id: number } | null = null;
+
+            // Verificar duplicado por NIF
+            if (input.opcoes.deduplicar && u.nif && u.nif.trim().length > 0) {
+              const existentes = await db
+                .select({ id: utentes.id })
+                .from(utentes)
+                .where(eq(utentes.nif, u.nif.trim()))
+                .limit(1);
+              if (existentes.length > 0) utenteExistente = existentes[0];
+            }
+
+            // Verificar duplicado por email
+            if (!utenteExistente && input.opcoes.deduplicar && u.email && u.email.trim().length > 0) {
+              const existentes = await db
+                .select({ id: utentes.id })
+                .from(utentes)
+                .where(eq(utentes.email, u.email.trim().toLowerCase()))
+                .limit(1);
+              if (existentes.length > 0) utenteExistente = existentes[0];
+            }
+
+            // Verificar duplicado por idOriginal nas observações (reimportação)
+            if (!utenteExistente && input.opcoes.deduplicar) {
+              const marcador = `Processo nº ${u.idOriginal}]`;
+              const existentes = await db
+                .select({ id: utentes.id })
+                .from(utentes)
+                .where(like(utentes.observacoes, `%${marcador}%`))
+                .limit(1);
+              if (existentes.length > 0) utenteExistente = existentes[0];
+            }
+
+            if (utenteExistente) {
+              mapaUtentes.set(u.idOriginal, utenteExistente.id);
+              utentesIgnorados++;
+              continue;
+            }
+
+            const telemovel =
+              u.telemovel?.trim() ||
+              u.telefone?.trim() ||
+              `000${String(i).padStart(6, "0")}`;
+
+            const resultado = await db.insert(utentes).values({
+              nome: u.nome,
+              nif: u.nif?.trim() || null,
+              email: u.email?.trim().toLowerCase() || null,
+              telemovel,
+              morada: u.morada || null,
+              cidade: u.cidade || null,
+              codigoPostal: u.codigoPostal || null,
+              pais: "Portugal",
+              dataNascimento: u.dataNascimento ? new Date(u.dataNascimento) : null,
+              genero: ["masculino", "feminino", "outro"].includes(u.genero || "")
+                ? (u.genero as any)
+                : null,
+              observacoes: u.observacoes ||
+                `[Importado do Imaginasoft — Processo nº ${u.idOriginal}]`,
+              ativo: true,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+
+            const insertId = (resultado as any)[0]?.insertId || (resultado as any).insertId;
+            if (insertId) {
+              mapaUtentes.set(u.idOriginal, insertId);
+              utentesImportados++;
+            }
+          } catch (e) {
+            console.warn(`[Imaginasoft] Erro ao importar utente ${u.idOriginal}:`, (e as Error).message);
+            utentesIgnorados++;
+          }
+        }
+
+        // ── FASE 2: Importar Imagens de RX (disco local ou S3) ───────────
+        if (input.opcoes.importarRx) {
+          const usarS3 = !!(process.env.S3_BUCKET_NAME && process.env.AWS_ACCESS_KEY_ID);
+
+          for (const img of analise.imagens) {
+            try {
+              const utenteId = mapaUtentes.get(img.utenteIdOriginal);
+              if (!utenteId) continue;
+
+              let s3Url: string;
+              let s3Key: string;
+
+              if (usarS3) {
+                // Upload para S3
+                try {
+                  const { S3Client, PutObjectCommand } = await import("@aws-sdk/client-s3");
+                  const s3 = new S3Client({ region: process.env.AWS_REGION || "eu-west-1" });
+                  const key = `imagiologia/${utenteId}/${Date.now()}_${img.nome.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+                  const dataUrl = ImaginasoftImporter.extrairImagemComoBase64(buffer, img);
+                  if (!dataUrl) { imagensFalhadas++; continue; }
+                  const base64Data = dataUrl.split(",")[1];
+                  const imgBuffer = Buffer.from(base64Data, "base64");
+                  await s3.send(new PutObjectCommand({
+                    Bucket: process.env.S3_BUCKET_NAME,
+                    Key: key,
+                    Body: imgBuffer,
+                    ContentType: img.mimeType,
+                  }));
+                  s3Key = key;
+                  s3Url = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${key}`;
+                } catch (s3Err: any) {
+                  // Fallback para disco local
+                  const caminhoLocal = ImaginasoftImporter.extrairImagemParaDisco(buffer, img);
+                  if (!caminhoLocal) { imagensFalhadas++; continue; }
+                  s3Key = `local:imaginasoft_${img.utenteIdOriginal}_${Date.now()}_${img.nome}`;
+                  s3Url = caminhoLocal;
+                }
+              } else {
+                // Disco local
+                const caminhoLocal = ImaginasoftImporter.extrairImagemParaDisco(buffer, img);
+                if (!caminhoLocal) { imagensFalhadas++; continue; }
+                s3Key = `local:imaginasoft_${img.utenteIdOriginal}_${Date.now()}_${img.nome}`;
+                s3Url = caminhoLocal;
+              }
+
+              const dataExame = img.dataFicheiro || new Date();
+
+              await db.insert(imagiologia).values({
+                utenteId,
+                tipo: img.tipoClinico,
+                s3Url,
+                s3Key,
+                nomeOriginal: img.nome,
+                mimeType: img.mimeType,
+                tamanhoBytes: img.tamanhoBytes,
+                descricao: `[Importado do Imaginasoft — Processo nº ${img.utenteIdOriginal}]`,
+                dataExame,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              });
+
+              imagensImportadas++;
+            } catch (e) {
+              console.warn(`[Imaginasoft] Erro ao importar imagem ${img.nome}:`, (e as Error).message);
+              imagensFalhadas++;
+            }
+          }
+        }
+
+        // Limpar sessão
+        sessoesImaginasoft.delete(input.sessaoId);
+
+        await logAuditAction(ctx.user, {
+          acao: "IMAGINASOFT_IMPORTADO",
+          tabela: "migracao",
+          registoId: 0,
+          descricao: `Backup Imaginasoft importado: ${utentesImportados} utentes, ${imagensImportadas} imagens RX`,
+          valorNovo: {
+            sessaoId: input.sessaoId,
+            utentesImportados,
+            utentesIgnorados,
+            imagensImportadas,
+            imagensFalhadas,
+          },
+        });
+
+        return {
+          sucesso: true,
+          utentesImportados,
+          utentesIgnorados,
+          imagensImportadas,
+          imagensFalhadas,
+          programaDetectado: "Imaginasoft",
+          mensagem: `Importação concluída: ${utentesImportados} utentes e ${imagensImportadas} imagens de Raio-X importados com sucesso.`
+            + (imagensFalhadas > 0 ? ` (${imagensFalhadas} imagens falharam)` : "")
+            + (utentesIgnorados > 0 ? ` ${utentesIgnorados} utentes já existiam e não foram duplicados.` : ""),
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Erro ao importar backup Imaginasoft: ${(error as Error).message}`,
+        });
+      }
+    }),
+
+  /**
+   * Obter lista de sistemas de RX suportados
+   */
+  obterSistemasRx: protectedProcedure.query(async () => {
+    return { sistemas: ImaginasoftImporter.obterSistemasRx() };
+  }),
 
   /**
    * Obter histórico de migrações
