@@ -103,7 +103,8 @@ export const laboratoriosRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "SERVICE_UNAVAILABLE" });
 
-      const conditions = [];
+      // V41 FIX: Sempre filtrar por tenant para isolamento multi-tenant
+      const conditions = [tenantFilter(laboratorios, tenantId)];
       if (input?.apenasAtivos) conditions.push(eq(laboratorios.ativo, true));
       if (input?.pesquisa) {
         conditions.push(
@@ -291,7 +292,8 @@ export const laboratoriosRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "SERVICE_UNAVAILABLE" });
 
-      const conditions = [];
+      // V41 FIX: Sempre filtrar por tenant para isolamento multi-tenant
+      const conditions = [tenantFilter(enviosLaboratorio, tenantId)];
       if (input?.laboratorioId) conditions.push(eq(enviosLaboratorio.laboratorioId, input.laboratorioId));
       if (input?.utenteId) conditions.push(eq(enviosLaboratorio.utenteId, input.utenteId));
       if (input?.estado) conditions.push(eq(enviosLaboratorio.estado, input.estado as any));

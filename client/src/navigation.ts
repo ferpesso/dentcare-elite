@@ -1,9 +1,10 @@
 /**
  * navigation.ts — Configuração Central da Barra Lateral
- * DentCare V35
+ * DentCare V35 → V41 — Expansão de Links Diretos
  *
  * Define a estrutura de navegação da aplicação.
  * Cada categoria agrupa funcionalidades relacionadas.
+ * V41: Sub-itens financeiros clicáveis com deep-linking via query params.
  */
 
 export interface NavItem {
@@ -12,6 +13,7 @@ export interface NavItem {
   icon: string; // Nome do ícone Lucide
   badge?: string; // Texto de badge opcional (ex: "Novo", "IA")
   description?: string;
+  children?: NavItem[]; // V41: Sub-itens para navegação direta
 }
 
 export interface NavCategory {
@@ -88,6 +90,32 @@ export const NAVIGATION: NavCategory[] = [
         path: "/financeiro",
         icon: "TrendingUp",
         description: "Receitas, despesas e previsões",
+        children: [
+          {
+            label: "Resumo Geral",
+            path: "/financeiro?tab=resumo",
+            icon: "BarChart3",
+            description: "Visão geral financeira",
+          },
+          {
+            label: "Recebimentos",
+            path: "/financeiro?tab=recebimentos",
+            icon: "ArrowDownCircle",
+            description: "Faturas pagas e pagamentos recebidos",
+          },
+          {
+            label: "Despesas",
+            path: "/financeiro?tab=despesas",
+            icon: "ArrowUpCircle",
+            description: "Custos, comissões e materiais",
+          },
+          {
+            label: "Todos os Movimentos",
+            path: "/financeiro?tab=movimentos",
+            icon: "List",
+            description: "Histórico completo de movimentos",
+          },
+        ],
       },
       {
         label: "Faturação",
@@ -113,6 +141,26 @@ export const NAVIGATION: NavCategory[] = [
         icon: "FlaskConical",
         badge: "Novo",
         description: "Gestão de laboratórios e envios",
+        children: [
+          {
+            label: "Envios",
+            path: "/laboratorios?tab=envios",
+            icon: "Send",
+            description: "Trabalhos enviados e em curso",
+          },
+          {
+            label: "Gestão de Labs",
+            path: "/laboratorios?tab=laboratorios",
+            icon: "Building2",
+            description: "Cadastro de laboratórios",
+          },
+          {
+            label: "Mov. Laboratoriais",
+            path: "/laboratorios?tab=estatisticas",
+            icon: "TrendingUp",
+            description: "Estatísticas e custos laboratoriais",
+          },
+        ],
       },
     ],
   },

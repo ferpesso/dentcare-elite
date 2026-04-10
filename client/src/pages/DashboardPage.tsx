@@ -488,7 +488,7 @@ export function DashboardPage() {
                 neon={NEON_COLORS.emerald}
                 variacao={{ percentual: Math.round(Math.abs(variacaoReceita)), positivo: variacaoReceita >= 0 }}
                 descricao={variacaoReceita >= 0 ? `+${variacaoReceita.toFixed(1)}% ${t('dashboard.metrics.vsLastMonth')}` : `${variacaoReceita.toFixed(1)}% ${t('dashboard.metrics.vsLastMonth')}`}
-                onClick={() => navigate("/financeiro")}
+                onClick={() => navigate("/financeiro?tab=recebimentos")}
               />
               <WidgetKPI
                 titulo={t('dashboard.metrics.retentionRate')}
@@ -496,7 +496,7 @@ export function DashboardPage() {
                 icone={Heart}
                 neon={NEON_COLORS.rose}
                 descricao={t('dashboard.metrics.patientsLast6Months')}
-                onClick={() => navigate("/utentes")}
+                 onClick={() => navigate("/utentes")}
               />
             </div>
           )}

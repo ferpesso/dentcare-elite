@@ -1,12 +1,13 @@
 /**
  * TopBar.tsx — Barra Superior Nano Banana Cyberpunk
- * DentCare Elite V35 — Dual Neon Cyan + Violet
+ * DentCare Elite V41 — Dual Neon Cyan + Violet
  *
+ * V41: Breadcrumbs com suporte a deep-linking (sub-tabs via query params)
  * Design: Glassmorphism profundo, breadcrumb com gradiente dual neon,
  * pesquisa glass com glow violet, tipografia Space Grotesk
  */
 
-import React, { memo } from "react";
+import React, { memo, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Search, ChevronRight, Command } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -52,16 +53,45 @@ const CATEGORY_ID_MAP: Record<string, string> = {
   "configuracoes": "configuracoes",
 };
 
-function resolvePageInfo(path: string): { titleKey: string; titleFallback: string; categoryId: string; categoryFallback: string } {
+interface PageInfo {
+  titleKey: string;
+  titleFallback: string;
+  categoryId: string;
+  categoryFallback: string;
+  childLabel?: string;
+}
+
+/**
+ * V41: Resolve informação da página incluindo sub-itens (children) para breadcrumbs.
+ * Suporta deep-linking: /financeiro?tab=recebimentos mostra "Financeiro > Recebimentos"
+ */
+function resolvePageInfo(path: string): PageInfo {
+  const queryString = typeof window !== "undefined" ? window.location.search : "";
+  const fullPath = path + queryString;
+
   for (const category of NAVIGATION) {
     for (const item of category.items) {
-      if (item.path === path) {
-        return {
-          titleKey: PATH_TO_KEY[item.path] || "",
+      const itemBase = item.path.split("?")[0];
+      if (itemBase === path || item.path === path) {
+        const result: PageInfo = {
+          titleKey: PATH_TO_KEY[itemBase] || "",
           titleFallback: item.label,
           categoryId: CATEGORY_ID_MAP[category.id] || "",
           categoryFallback: category.label,
         };
+
+        // V41: Verificar se há um sub-item (child) ativo via query params
+        if (item.children && queryString) {
+          for (const child of item.children) {
+            const [, childQuery] = child.path.split("?");
+            if (childQuery && fullPath.includes(childQuery)) {
+              result.childLabel = child.label;
+              break;
+            }
+          }
+        }
+
+        return result;
       }
     }
   }
@@ -73,7 +103,9 @@ export const TopBar = memo(function TopBar() {
   const [location] = useLocation();
   const { nomeClinica } = useConfig();
   const { t } = useTranslation();
-  const pageInfo = resolvePageInfo(location);
+
+  // V41: Recalcular quando a URL muda (incluindo query params)
+  const pageInfo = useMemo(() => resolvePageInfo(location), [location]);
 
   const title = pageInfo.titleKey
     ? t(`nav.items.${pageInfo.titleKey}`, { defaultValue: pageInfo.titleFallback })
@@ -96,7 +128,7 @@ export const TopBar = memo(function TopBar() {
         boxShadow: '0 4px 28px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(179, 136, 255, 0.04)',
       }}
     >
-      {/* Breadcrumb — Dual Neon accent */}
+      {/* Breadcrumb — Dual Neon accent com suporte a sub-tabs V41 */}
       <div className="flex items-center gap-3">
         <span className="text-[var(--text-muted)] text-sm font-medium tracking-tight">{category}</span>
         <ChevronRight
@@ -104,8 +136,10 @@ export const TopBar = memo(function TopBar() {
           style={{ color: '#B388FF' }}
         />
         <span
-          className="text-sm font-bold tracking-tight"
-          style={{
+          className={`text-sm font-bold tracking-tight ${pageInfo.childLabel ? '' : ''}`}
+          style={pageInfo.childLabel ? {
+            color: 'var(--text-secondary)',
+          } : {
             background: 'linear-gradient(135deg, #EEF4FF 0%, #00E5FF 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -114,6 +148,26 @@ export const TopBar = memo(function TopBar() {
         >
           {title}
         </span>
+        {/* V41: Sub-tab breadcrumb */}
+        {pageInfo.childLabel && (
+          <>
+            <ChevronRight
+              className="w-3.5 h-3.5 opacity-50"
+              style={{ color: '#B388FF' }}
+            />
+            <span
+              className="text-sm font-bold tracking-tight"
+              style={{
+                background: 'linear-gradient(135deg, #EEF4FF 0%, #00E5FF 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              {pageInfo.childLabel}
+            </span>
+          </>
+        )}
       </div>
 
       {/* Ações — Pesquisa Glass, Tema, Notificações */}
